@@ -16,16 +16,27 @@
 
 #include <sensor_msgs/PointCloud2.h>
 
+#include <math.h>
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
 class Selector {
 
 private:
     ros::NodeHandle n;
     ros::Publisher cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_sphere", 1);
     ros::Publisher frame_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/cur_frame", 1);
+    ros::Publisher sel_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/selected_pc", 1);
 
     std::string frame_id;
-    double radius = 0.33;
-    std::vector<double> center;
+    double radius;
+    double cen_x;
+    double cen_y;
+    double cen_z;
+    uint32_t frame_index;
+
+    std::vector<std::vector<double> > points;
+    std::vector<std::vector<double> > selected_points;
 
     std::vector<sensor_msgs::PointCloud2> frames;
 
@@ -33,7 +44,15 @@ private:
 
 public:
     Selector(std::string frame): frame_id(frame) {
-        center.assign(3, 0);
+        radius = 0.33;
+        cen_x = 0;
+        cen_y = 0;
+        cen_z = 0;
+        frame_index = 0;
+
+        frames.reserve(2000);
+        points.reserve(500000);
+        selected_points.reserve(30000);
 
         // Read in the rosbag
         rosbag::Bag bag;
@@ -46,16 +65,11 @@ public:
 
         foreach(rosbag::MessageInstance const m, view)
         {
-            sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
+            sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
             
+            frames.push_back(*temp);
 
-            // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-            frames.push_back(*s);
-
-            // pcl::fromROSMsg(*s, *cloud);
-
-            //break;
+            break;
         }
         
         bag.close();
@@ -65,20 +79,77 @@ public:
 
         setup_sphere();
 
+        update_frame();
+
         setup_interactive_marker();
     }
 
-    void move_center(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback ) {
-        // Check why the order here is whack
-        center[0] = feedback->pose.position.x;
-        center[1] = - feedback->pose.position.z;
-        center[2] = feedback->pose.position.y;
+    void update_frame() {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-        cube_marker.pose.position.x = center[0];
-        cube_marker.pose.position.y = center[1];
-        cube_marker.pose.position.z = center[2];
+        pcl::fromROSMsg(frames[frame_index], *cloud);
+
+        points.clear();
+        foreach(const pcl::PointXYZRGB& pt, cloud->points) {
+            std::vector<double> point{pt.x, pt.y, pt.z};
+            points.push_back(point);
+        }
+    }
+
+    void select_points() {
+        //pcl::PointCloud<pcl::PointXYZRGB>::Ptr msg (new pcl::PointCloud<pcl::PointXYZRGB>);
+        selected_points.clear();
+        double x, y, z;
+        for(int i = 0; i < points.size(); ++i) {
+            x = points[i][0];
+            y = points[i][1];
+            z = points[i][2];
+            double dist = sqrt((x - cen_x) * (x - cen_x) +
+                               (y - cen_y) * (y - cen_y) +
+                               (z - cen_z) * (z - cen_z));
+
+            if(dist < radius) {
+                std::vector<double> point{x, y, z};
+                selected_points.push_back(point);
+            }
+        }
+    }
+
+    void publish_points() {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr msg (new pcl::PointCloud<pcl::PointXYZRGB>);
+        for(int i = 0; i < selected_points.size(); ++i) {
+            pcl::PointXYZRGB pt;
+            pt.x = selected_points[i][0];
+            pt.y = selected_points[i][1];
+            pt.z = selected_points[i][2];
+            msg->points.push_back(pt);
+        }
+
+        sensor_msgs::PointCloud2::Ptr temp;
+
+        pcl::toROSMsg(*msg, *temp);
+        temp->header.frame_id = frame_id;
+        temp->header.stamp = ros::Time::now();
+
+        sel_pub.publish(temp);
+    }
+
+    void move_center(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback ) {
+        // Check why the order here is whack, definitely something with coordinate frames
+        cen_x = feedback->pose.position.x;
+        cen_y = - feedback->pose.position.z;
+        cen_z = feedback->pose.position.y;
+
+        cube_marker.pose.position.x = cen_x;
+        cube_marker.pose.position.y = cen_y;
+        cube_marker.pose.position.z = cen_z;
 
         cube_pub.publish(cube_marker);
+
+        select_points();
+
+        //publish_points();
+
     }
 
     void setup_interactive_marker() {
@@ -158,10 +229,9 @@ public:
 
 };
 
-int main(int argc, char** argv)
-{
-  ros::init(argc, argv, "simple_marker");
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "simple_marker");
 
-  // Create class for selector
-  Selector selector("camera_depth_optical_frame");
+    // Create class for selector
+    Selector selector("camera_depth_optical_frame");
 }
