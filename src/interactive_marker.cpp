@@ -43,20 +43,16 @@ private:
     visualization_msgs::Marker cube_marker;
 
 public:
-    Selector(std::string frame): frame_id(frame) {
+    Selector(std::string frame, std::string bag_file_path): frame_id(frame) {
         radius = 0.33;
         cen_x = 0;
         cen_y = 0;
         cen_z = 0;
-        frame_index = 0;
-
-        frames.reserve(2000);
-        points.reserve(500000);
-        selected_points.reserve(30000);
+        frame_index = 1000;
 
         // Read in the rosbag
         rosbag::Bag bag;
-        bag.open("garden_high_accuracy.bag");
+        bag.open(bag_file_path);
 
         std::vector<std::string> topics;
         topics.push_back(std::string("/camera/depth/color/points"));
@@ -68,18 +64,16 @@ public:
             sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
             
             frames.push_back(*temp);
-
-            break;
         }
         
         bag.close();
 
         std::cout << "Finished reading bag" << std::endl;
-        frame_pub.publish(frames[0]);
+        frame_pub.publish(frames[frame_index]);
 
         setup_sphere();
 
-        update_frame();
+        select_points();
 
         setup_interactive_marker();
     }
@@ -97,22 +91,26 @@ public:
     }
 
     void select_points() {
-        //pcl::PointCloud<pcl::PointXYZRGB>::Ptr msg (new pcl::PointCloud<pcl::PointXYZRGB>);
-        selected_points.clear();
-        double x, y, z;
-        for(int i = 0; i < points.size(); ++i) {
-            x = points[i][0];
-            y = points[i][1];
-            z = points[i][2];
-            double dist = sqrt((x - cen_x) * (x - cen_x) +
-                               (y - cen_y) * (y - cen_y) +
-                               (z - cen_z) * (z - cen_z));
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
+        pcl::fromROSMsg(frames[frame_index], *cloud);
+
+        pcl::PointCloud<pcl::PointXYZRGB> msg;
+        foreach(const pcl::PointXYZRGB& pt, cloud->points) {
+            double dist = sqrt((pt.x - cen_x) * (pt.x - cen_x) +
+                               (pt.y - cen_y) * (pt.y - cen_y) +
+                               (pt.z - cen_z) * (pt.z - cen_z));
             if(dist < radius) {
-                std::vector<double> point{x, y, z};
-                selected_points.push_back(point);
+                msg.points.push_back(pt);
             }
         }
+
+        sensor_msgs::PointCloud2 temp;
+        pcl::toROSMsg(msg, temp);
+        temp.header.frame_id = frame_id;
+        temp.header.stamp = ros::Time::now();
+
+        sel_pub.publish(temp);
     }
 
     void publish_points() {
@@ -131,7 +129,7 @@ public:
         temp->header.frame_id = frame_id;
         temp->header.stamp = ros::Time::now();
 
-        sel_pub.publish(temp);
+        //sel_pub.publish(temp);
     }
 
     void move_center(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback ) {
@@ -147,9 +145,6 @@ public:
         cube_pub.publish(cube_marker);
 
         select_points();
-
-        //publish_points();
-
     }
 
     void setup_interactive_marker() {
@@ -226,12 +221,15 @@ public:
 
         cube_pub.publish(cube_marker);
     }
-
 };
 
+// rosrun point_cloud_selector point_cloud_selector camera_depth_optical_frame 
+// /home/christianforeman/catkin_ws/src/point_cloud_selector/garden_high_accuracy.bag
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "simple_marker");
+    ros::init(argc, argv, "point_cloud_selector");
+    std::string frame = std::string(argv[1]);
+    std::string bag_file_path = std::string(argv[2]);
 
     // Create class for selector
-    Selector selector("camera_depth_optical_frame");
+    Selector selector(frame, bag_file_path);
 }
