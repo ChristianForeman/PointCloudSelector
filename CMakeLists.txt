@@ -151,53 +151,50 @@ else()
   set(QT_LIBRARIES Qt5::Widgets)
 endif()
 
+add_definitions(-DQT_NO_KEYWORDS)
+
+# Define source file
+set(${PROJECT_NAME}_SRCS
+  src/sel_panel.cpp
+)
+
+# Define header file
+set(${PROJECT_NAME}_HDRS
+  src/sel_panel.hpp
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
-add_definitions(-DQT_NO_KEYWORDS)
+# Create header from ui file (uic)
+if(rviz_QT_VERSION VERSION_LESS "5")
+    message(STATUS "Generate header for ui with rviz_QT_VERSION: ${rviz_QT_VERSION}")
+    qt4_wrap_ui(${PROJECT_NAME}_UIS_H ${${PROJECT_NAME}_UIS})
+    qt4_wrap_cpp(${PROJECT_NAME}_MOCS ${${PROJECT_NAME}_HDRS})
+else()
+    message(STATUS "Generate header for ui with rviz_QT_VERSION: ${rviz_QT_VERSION}")
+    qt5_wrap_ui(${PROJECT_NAME}_UIS_H ${${PROJECT_NAME}_UIS})
+    qt5_wrap_cpp(${PROJECT_NAME}_MOCS ${${PROJECT_NAME}_HDRS})
+endif()
 
-set(SRC_FILES
-  src/myviz.cpp
-  src/main.cpp
+## Add library is needed in order to generate the header file from ui file.
+add_library(sel_panel
+  ${${PROJECT_NAME}_SRCS}
+  ${${PROJECT_NAME}_UIS_H}
+  ${${PROJECT_NAME}_MOCS} 
 )
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(point_cloud_selector src/interactive_marker.cpp)
-add_executable(myviz ${SRC_FILES})
-
-
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(point_cloud_selector ${catkin_LIBRARIES})
-target_link_libraries(myviz ${QT_LIBRARIES} ${catkin_LIBRARIES})
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+target_link_libraries(sel_panel ${QT_LIBRARIES} ${catkin_LIBRARIES})
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -219,23 +216,3 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_point_cloud_selector.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)

@@ -89,6 +89,6 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-    <!-- <rviz plugin="${prefix}/rviz_plugin.xml"/> -->
+    <rviz plugin="${prefix}/sel_panel_plugin.xml"/>
   </export>
 </package>

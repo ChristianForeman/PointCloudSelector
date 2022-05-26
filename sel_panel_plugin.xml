@@ -1,0 +1,9 @@
+<library path="lib/libsel_panel">
+
+  <class type="rviz_panel::SelPanel" base_class_type="rviz::Panel">
+    <description>
+      Panel that allows for selection of point clouds
+    </description>
+  </class>
+
+</library>
