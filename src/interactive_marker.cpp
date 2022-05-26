@@ -121,7 +121,7 @@ public:
             pt.z = selected_points[i][2];
             msg->points.push_back(pt);
         }
-
+        
         sensor_msgs::PointCloud2::Ptr temp;
 
         pcl::toROSMsg(*msg, *temp);
