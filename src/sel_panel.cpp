@@ -12,6 +12,28 @@
 #include "rviz/render_panel.h"
 #include "rviz/display.h"
 
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
+#include <interactive_markers/interactive_marker_server.h>
+
+#include <string.h>
+#include <stdio.h>
+#include <vector>
+
+#include <boost/foreach.hpp>
+#define foreach BOOST_FOREACH
+
+#include <sensor_msgs/PointCloud2.h>
+
+#include <math.h>
+
+#include "std_msgs/Bool.h"
+#include "std_msgs/Float32MultiArray.h"
+
 PLUGINLIB_EXPORT_CLASS(rviz_panel::SelPanel, rviz::Panel)
 
 namespace rviz_panel
@@ -19,9 +41,20 @@ namespace rviz_panel
     SelPanel::SelPanel(QWidget * parent)
     :   rviz::Panel(parent)
     {
+        center_sub = n.subscribe("/sel_data/center", 1000, &SelPanel::new_center, this);
+
+        // Initialize member variables
+        frame_id = "camera_depth_optical_frame";
+        radius = 0.33;
+        frame_idx = 0;
+        cen_x = 0;
+        cen_y = 0;
+        cen_z = 0;
+
         // Construct and lay out labels and slider controls.
         QPushButton* sel_bag = new QPushButton("&Bag Select", this);
-        QPushButton* sel_region = new QPushButton("&Select Region", this);
+        QPushButton* sel_region = new QPushButton("&Start Selection", this);
+        QPushButton* end_selection = new QPushButton("&End Selection", this);
         QLabel* frame_label = new QLabel("Frame");
         frame_slider = new QSlider(Qt::Horizontal);
         frame_slider->setMinimum(0);
@@ -33,6 +66,7 @@ namespace rviz_panel
         QGridLayout* controls_layout = new QGridLayout();
         controls_layout->addWidget(sel_bag, 0, 0);
         controls_layout->addWidget(sel_region, 0, 1);
+        controls_layout->addWidget(end_selection, 0, 2);
         controls_layout->addWidget(frame_label, 1, 0);
         controls_layout->addWidget(frame_slider, 1, 1);
         controls_layout->addWidget(radius_label, 2, 0);
@@ -49,6 +83,7 @@ namespace rviz_panel
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
         connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_region);
+        connect(end_selection, &QPushButton::clicked, this, &SelPanel::end_selection);
         connect(frame_slider, SIGNAL(valueChanged(int)), this, SLOT(set_frame(int)));
         connect(radius_slider, SIGNAL(valueChanged(int)), this, SLOT(set_radius(int)));
 
@@ -63,8 +98,8 @@ namespace rviz_panel
         manager->startUpdate();
 
         // Initialize the slider values.
-        frame_slider->setValue( 0 );
-        radius_slider->setValue( 33 );
+        frame_slider->setValue(0);
+        radius_slider->setValue(33);
     }
 
     /**
@@ -88,19 +123,99 @@ namespace rviz_panel
         ROS_INFO_STREAM(bag_filepath);
 
         // read in the rosbag
-        // set the frame slider to go up to the max value
+        rosbag::Bag bag;
+        bag.open(bag_filepath);
+
+        std::vector<std::string> topics;
+        topics.push_back(std::string("/camera/depth/color/points"));
+
+        rosbag::View view(bag, rosbag::TopicQuery(topics));
+
+        foreach(rosbag::MessageInstance const m, view)
+        {
+            sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
+            
+            frames.push_back(*temp);
+        }
+        
+        bag.close();
+
+        frame_pub.publish(frames[frame_idx]);
+
+        frame_slider->setMaximum(frames.size() - 1);
+
+        ROS_INFO_STREAM("Finished Reading in Bag");
     }
 
+
+    void SelPanel::setup_sphere() {
+        // create a grey box marker
+        cube_marker.header.frame_id = frame_id;
+        cube_marker.header.stamp = ros::Time::now();
+
+        cube_marker.ns = "sphere";
+        cube_marker.id = 0;
+
+        cube_marker.type = visualization_msgs::Marker::SPHERE;
+        cube_marker.scale.x = radius * 2;
+        cube_marker.scale.y = radius * 2;
+        cube_marker.scale.z = radius * 2;
+        cube_marker.color.r = 0.0;
+        cube_marker.color.g = 0.5;
+        cube_marker.color.b = 0.5;
+        cube_marker.color.a = 0.3;
+
+        while (cube_pub.getNumSubscribers() < 1) {
+            if (!ros::ok())
+            {
+                return;
+            }
+            ROS_WARN_ONCE("Please create a subscriber to the marker");
+            sleep(1);
+        }
+
+        cube_pub.publish(cube_marker);
+    }
+
+    void SelPanel::new_center(const std_msgs::Float32MultiArray new_cen) {
+        // gets message of new center from moving marker
+        cen_x = new_cen.data[0];
+        cen_y = new_cen.data[1];
+        cen_z = new_cen.data[2];
+
+        cube_marker.pose.position.x = cen_x;
+        cube_marker.pose.position.y = cen_y;
+        cube_marker.pose.position.z = cen_z;
+
+        cube_pub.publish(cube_marker);
+    }
+    
     void SelPanel::select_region() {
-        // spawn in an interactive marker
+        // spawn in an interactive marker only if this is a time to toggle. otherwise 
+        setup_sphere();
+
+        // Passing an int may be better
+        std_msgs::Bool flag;
+        flag.data = true;
+
+        toggle_pub.publish(flag);
+
+        //TODO: If pressed select after marker is made, add the selection, check for duplicates
+    }
+
+    void SelPanel::end_selection() {
+        //TODO: Save selected region to a file? Make the marker invisible
+        // here should save the current selection into a file and clear out the past selection
+        ROS_INFO_STREAM("Selection Ended");
     }
 
     // This function is a Qt slot connected to a QSlider's valueChanged()
     // signal.  It sets the line thickness of the grid by changing the
     // grid's "Line Width" property.
     void SelPanel::set_frame(int frame_num) {
-        ROS_INFO_STREAM(frame_num);
-        return;
+        frame_idx = frame_num;
+
+        frame_pub.publish(frames[frame_idx]);
     }
 
     // This function is a Qt slot connected to a QSlider's valueChanged()
@@ -109,5 +224,4 @@ namespace rviz_panel
     void SelPanel::set_radius(int new_radius) {
         return;
     }
-
 } // namespace rviz_panel

@@ -8,6 +8,12 @@
 #include <string.h>
 #include <QSlider>
 
+#include <sensor_msgs/PointCloud2.h>
+#include <interactive_markers/interactive_marker_server.h>
+
+#include "std_msgs/Bool.h"
+#include "std_msgs/Float32MultiArray.h"
+
 namespace rviz
 {
 class Display;
@@ -51,6 +57,9 @@ namespace rviz_panel
             virtual void save(rviz::Config config) const;
             virtual void load(const rviz::Config & config);
 
+            void setup_sphere();
+            void new_center(const std_msgs::Float32MultiArray new_cen);
+
         /**
          *  Next come a couple of public Qt Slots.
          */
@@ -63,6 +72,7 @@ namespace rviz_panel
 
             void set_bag();
             void select_region();
+            void end_selection(); 
             void set_frame(int frame_num);
             void set_radius(int new_radius);
 
@@ -72,16 +82,28 @@ namespace rviz_panel
         protected:
             // ROS declaration
             ros::NodeHandle n;
+            ros::Publisher cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_sphere", 1);
+            ros::Publisher frame_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/cur_frame", 1);
+            ros::Publisher sel_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/selected_pc", 1);
+            ros::Publisher toggle_pub = n.advertise<std_msgs::Bool>("/sel_data/toggle", 1);
+
+            ros::Subscriber center_sub;
 
             rviz::VisualizationManager* manager;
             rviz::RenderPanel* render_panel;
 
             std::string bag_filepath;
+            int frame_idx;
+            std::string frame_id;
             double radius;
             double cen_x;
             double cen_y;
             double cen_z;
             QSlider* frame_slider;
+
+            std::vector<sensor_msgs::PointCloud2> frames;
+
+            visualization_msgs::Marker cube_marker;
     };
 } // namespace rviz_panel
 

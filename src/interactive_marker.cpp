@@ -59,8 +59,7 @@ public:
 
         rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-        foreach(rosbag::MessageInstance const m, view)
-        {
+        foreach(rosbag::MessageInstance const m, view) {
             sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
             
             frames.push_back(*temp);
@@ -132,7 +131,7 @@ public:
         //sel_pub.publish(temp);
     }
 
-    void move_center(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback ) {
+    void move_center(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback) {
         // Check why the order here is whack, definitely something with coordinate frames
         cen_x = feedback->pose.position.x;
         cen_y = - feedback->pose.position.z;
@@ -190,6 +189,7 @@ public:
         // 'commit' changes and send to all clients
         server.applyChanges();
 
+        //ros::Duration(10).sleep();
         ros::spin();
     }
 
@@ -223,8 +223,7 @@ public:
     }
 };
 
-// rosrun point_cloud_selector point_cloud_selector camera_depth_optical_frame 
-// /home/christianforeman/catkin_ws/src/point_cloud_selector/garden_high_accuracy.bag
+// rosrun point_cloud_selector point_cloud_selector camera_depth_optical_frame /home/christianforeman/catkin_ws/src/point_cloud_selector/garden_high_accuracy.bag
 int main(int argc, char** argv) {
     ros::init(argc, argv, "point_cloud_selector");
     std::string frame = std::string(argv[1]);
