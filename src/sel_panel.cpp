@@ -20,44 +20,35 @@ namespace rviz_panel
     :   rviz::Panel(parent)
     {
         // Construct and lay out labels and slider controls.
+        QPushButton* sel_bag = new QPushButton("&Bag Select", this);
+        QPushButton* sel_region = new QPushButton("&Select Region", this);
         QLabel* frame_label = new QLabel("Frame");
-        QSlider* frame_slider = new QSlider(Qt::Horizontal);
+        frame_slider = new QSlider(Qt::Horizontal);
         frame_slider->setMinimum(0);
-        frame_slider->setMaximum(100);
+        frame_slider->setMaximum(0);
         QLabel* radius_label = new QLabel("Radius");
         QSlider* radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(100);
         QGridLayout* controls_layout = new QGridLayout();
-        controls_layout->addWidget(frame_label, 0, 0);
-        controls_layout->addWidget(frame_slider, 0, 1);
-        controls_layout->addWidget(radius_label, 1, 0);
-        controls_layout->addWidget(radius_slider, 1, 1);
-
-        QPushButton* sel_bag = new QPushButton("&Bag Select", this);
-        controls_layout->addWidget(sel_bag, 2, 0);
-
-
-        // QString filename = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home", tr("Bags (*.bag)"));
-
-        // QFileDialog* file_sel = new QFileDialog(this);
-        // file_sel->setFileMode(QFileDialog::AnyFile);
-        // file_sel->setWindowTitle("Select Bag File");
-        // file_sel->setDefaultSuffix("bag");
-        // file_sel->setWindowIcon(QIcon(Resources::Export16));
-        // QFileDialog.->setNameFilter(tr("Bags (*.bag)"));
-        // controls_layout->addWidget(file_sel, 2, 0);
+        controls_layout->addWidget(sel_bag, 0, 0);
+        controls_layout->addWidget(sel_region, 0, 1);
+        controls_layout->addWidget(frame_label, 1, 0);
+        controls_layout->addWidget(frame_slider, 1, 1);
+        controls_layout->addWidget(radius_label, 2, 0);
+        controls_layout->addWidget(radius_slider, 2, 1);
 
         // Construct and lay out render panel.
         render_panel = new rviz::RenderPanel();
         QVBoxLayout* main_layout = new QVBoxLayout;
-        main_layout->addLayout( controls_layout );
+        main_layout->addLayout(controls_layout);
 
         // Set the top-level layout for this MyViz widget.
         setLayout(main_layout);
 
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
+        connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_region);
         connect(frame_slider, SIGNAL(valueChanged(int)), this, SLOT(set_frame(int)));
         connect(radius_slider, SIGNAL(valueChanged(int)), this, SLOT(set_radius(int)));
 
@@ -93,14 +84,22 @@ namespace rviz_panel
     }
 
     void SelPanel::set_bag() {
-        bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home", tr("Bags (*.bag)")).toStdString();
+        bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home/christianforeman/catkin_ws/src/point_cloud_selector", tr("Bags (*.bag)")).toStdString();
         ROS_INFO_STREAM(bag_filepath);
+
+        // read in the rosbag
+        // set the frame slider to go up to the max value
+    }
+
+    void SelPanel::select_region() {
+        // spawn in an interactive marker
     }
 
     // This function is a Qt slot connected to a QSlider's valueChanged()
     // signal.  It sets the line thickness of the grid by changing the
     // grid's "Line Width" property.
     void SelPanel::set_frame(int frame_num) {
+        ROS_INFO_STREAM(frame_num);
         return;
     }
 

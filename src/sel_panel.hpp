@@ -6,6 +6,7 @@
 
 // Other ROS dependencies
 #include <string.h>
+#include <QSlider>
 
 namespace rviz
 {
@@ -61,6 +62,7 @@ namespace rviz_panel
         private Q_SLOTS:
 
             void set_bag();
+            void select_region();
             void set_frame(int frame_num);
             void set_radius(int new_radius);
 
@@ -79,6 +81,7 @@ namespace rviz_panel
             double cen_x;
             double cen_y;
             double cen_z;
+            QSlider* frame_slider;
     };
 } // namespace rviz_panel
 
