@@ -30,6 +30,7 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include <math.h>
+#include <cmath>
 
 #include "std_msgs/Bool.h"
 #include "std_msgs/Float32MultiArray.h"
@@ -50,17 +51,18 @@ namespace rviz_panel
         cen_x = 0;
         cen_y = 0;
         cen_z = 0;
+        is_selecting = false;
 
         // Construct and lay out labels and slider controls.
         QPushButton* sel_bag = new QPushButton("&Bag Select", this);
-        QPushButton* sel_region = new QPushButton("&Start Selection", this);
+        sel_region = new QPushButton("&Start Selection", this);
         QPushButton* end_selection = new QPushButton("&End Selection", this);
         QLabel* frame_label = new QLabel("Frame");
         frame_slider = new QSlider(Qt::Horizontal);
         frame_slider->setMinimum(0);
         frame_slider->setMaximum(0);
         QLabel* radius_label = new QLabel("Radius");
-        QSlider* radius_slider = new QSlider(Qt::Horizontal);
+        radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(100);
         QGridLayout* controls_layout = new QGridLayout();
@@ -79,7 +81,9 @@ namespace rviz_panel
 
         // Set the top-level layout for this MyViz widget.
         setLayout(main_layout);
-
+        frame_slider->setValue(0);
+        radius_slider->setValue(33);
+ 
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
         connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_region);
@@ -96,10 +100,6 @@ namespace rviz_panel
         manager = new rviz::VisualizationManager(render_panel);
         manager->initialize();
         manager->startUpdate();
-
-        // Initialize the slider values.
-        frame_slider->setValue(0);
-        radius_slider->setValue(33);
     }
 
     /**
@@ -148,22 +148,39 @@ namespace rviz_panel
     }
 
 
-    void SelPanel::setup_sphere() {
+    void SelPanel::setup_cube() {
         // create a grey box marker
-        cube_marker.header.frame_id = frame_id;
-        cube_marker.header.stamp = ros::Time::now();
 
-        cube_marker.ns = "sphere";
+
+        cube_marker.ns = "cube";
         cube_marker.id = 0;
 
-        cube_marker.type = visualization_msgs::Marker::SPHERE;
-        cube_marker.scale.x = radius * 2;
-        cube_marker.scale.y = radius * 2;
-        cube_marker.scale.z = radius * 2;
+        cube_marker.type = visualization_msgs::Marker::CUBE;
         cube_marker.color.r = 0.0;
         cube_marker.color.g = 0.5;
         cube_marker.color.b = 0.5;
-        cube_marker.color.a = 0.3;
+
+        update_marker();
+    }
+
+    void SelPanel::update_marker() {
+        cube_marker.header.frame_id = frame_id; 
+        cube_marker.header.stamp = ros::Time::now();
+
+        if(is_selecting) {
+            cube_marker.color.a = 0.3;
+        }
+        else {
+            cube_marker.color.a = 0.0;
+        }
+
+        cube_marker.scale.x = radius * 2;
+        cube_marker.scale.y = radius * 2;
+        cube_marker.scale.z = radius * 2;
+  
+        cube_marker.pose.position.x = cen_x;
+        cube_marker.pose.position.y = cen_y;
+        cube_marker.pose.position.z = cen_z;
 
         while (cube_pub.getNumSubscribers() < 1) {
             if (!ros::ok())
@@ -183,45 +200,76 @@ namespace rviz_panel
         cen_y = new_cen.data[1];
         cen_z = new_cen.data[2];
 
-        cube_marker.pose.position.x = cen_x;
-        cube_marker.pose.position.y = cen_y;
-        cube_marker.pose.position.z = cen_z;
+        update_marker();
+    }
+    
+    void SelPanel::select() {
+        // get the points that are within the range
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-        cube_pub.publish(cube_marker);
+        pcl::fromROSMsg(frames[frame_idx], *cloud);
+
+        double x_diff, y_diff, z_diff;
+
+        foreach(const pcl::PointXYZRGB& pt, cloud->points) {
+            x_diff = std::abs(pt.x - cen_x);
+            y_diff = std::abs(pt.y - cen_y);
+            z_diff = std::abs(pt.z - cen_z);
+
+            if(x_diff < radius && y_diff < radius && z_diff < radius) {
+                current_selection.points.push_back(pt);
+            }
+        }
+
+        sensor_msgs::PointCloud2 temp;
+        pcl::toROSMsg(current_selection, temp);
+        temp.header.frame_id = frame_id;
+        temp.header.stamp = ros::Time::now();
+
+        sel_pub.publish(temp);
+        // TODO: check for duplicates
     }
     
     void SelPanel::select_region() {
-        // spawn in an interactive marker only if this is a time to toggle. otherwise 
-        setup_sphere();
+        if(is_selecting == false) {
+            is_selecting = true;
+            sel_region->setText("&Select");
+            setup_cube();
+            
+            // Tell the other node to create the IM
+            std_msgs::Bool flag;
+            flag.data = is_selecting;
 
-        // Passing an int may be better
-        std_msgs::Bool flag;
-        flag.data = true;
-
-        toggle_pub.publish(flag);
-
-        //TODO: If pressed select after marker is made, add the selection, check for duplicates
+            toggle_pub.publish(flag);
+        }
+        else {
+            select();
+        }
     }
 
     void SelPanel::end_selection() {
+        is_selecting = false;
+        update_marker();
+        std_msgs::Bool flag;
+        flag.data = is_selecting;
+        toggle_pub.publish(flag);
+        current_selection.points.clear();
         //TODO: Save selected region to a file? Make the marker invisible
+        sel_region->setText("&Start Selection");
         // here should save the current selection into a file and clear out the past selection
-        ROS_INFO_STREAM("Selection Ended");
     }
 
-    // This function is a Qt slot connected to a QSlider's valueChanged()
-    // signal.  It sets the line thickness of the grid by changing the
-    // grid's "Line Width" property.
     void SelPanel::set_frame(int frame_num) {
+        // reset collision statistics
+        end_selection(); // may want to add a default arg to end selection which signifies saving or not
+
         frame_idx = frame_num;
 
         frame_pub.publish(frames[frame_idx]);
     }
 
-    // This function is a Qt slot connected to a QSlider's valueChanged()
-    // signal.  It sets the cell size of the grid by changing the grid's
-    // "Cell Size" Property.
     void SelPanel::set_radius(int new_radius) {
-        return;
+        radius = new_radius/100.0;
+        update_marker();
     }
 } // namespace rviz_panel

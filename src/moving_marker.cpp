@@ -16,13 +16,14 @@ private:
     double cen_x;
     double cen_y;
     double cen_z;
+
+    bool is_active;
     
 public:
     IM(std::string frame): frame_id(frame) {
         toggle_sub = n.subscribe("/sel_data/toggle", 1000, &IM::toggle_im, this);  
-
         cen_x = cen_y = cen_z = 0;
-
+        is_active = false;
         ros::spin();
     }
 
@@ -42,8 +43,16 @@ public:
     }
 
     void toggle_im(std_msgs::Bool msg) {
-        ROS_INFO_STREAM("Now Selecting Region");
-        setup_interactive_marker();
+        if(msg.data) {
+            is_active = true;
+            setup_interactive_marker();
+            ROS_INFO_STREAM("Starting Selection");
+        }
+        else {
+            is_active = false;
+            // delete the marker
+            ROS_INFO_STREAM("Ending Selection");
+        }
     }
 
     void setup_interactive_marker() {
@@ -54,6 +63,10 @@ public:
         visualization_msgs::InteractiveMarker int_marker;
         int_marker.header.frame_id = frame_id;
         int_marker.header.stamp = ros::Time::now();
+        
+        int_marker.pose.position.x = cen_x;
+        int_marker.pose.position.y = cen_y;
+        int_marker.pose.position.z = cen_z;
 
         // create a control which will move the box
         // this control does not contain any markers,
@@ -88,8 +101,9 @@ public:
         server.insert(int_marker, boost::bind(&IM::move_center, this, _1));
         // 'commit' changes and send to all clients
         server.applyChanges();
-
-        ros::spin();
+        if(is_active) {
+            ros::spin();
+        }
     }
 };
 

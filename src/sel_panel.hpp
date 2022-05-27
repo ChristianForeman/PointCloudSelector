@@ -3,10 +3,13 @@
 
 #include <ros/ros.h>
 #include <rviz/panel.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 // Other ROS dependencies
 #include <string.h>
 #include <QSlider>
+#include <QPushButton>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <interactive_markers/interactive_marker_server.h>
@@ -57,8 +60,10 @@ namespace rviz_panel
             virtual void save(rviz::Config config) const;
             virtual void load(const rviz::Config & config);
 
-            void setup_sphere();
+            void setup_cube();
             void new_center(const std_msgs::Float32MultiArray new_cen);
+            void select();
+            void update_marker();
 
         /**
          *  Next come a couple of public Qt Slots.
@@ -100,8 +105,14 @@ namespace rviz_panel
             double cen_y;
             double cen_z;
             QSlider* frame_slider;
+            QSlider* radius_slider;
+            QPushButton* sel_region;
+            bool is_selecting;
 
             std::vector<sensor_msgs::PointCloud2> frames;
+
+            // TODO: May want to make this dynamic memory
+            pcl::PointCloud<pcl::PointXYZRGB> current_selection;
 
             visualization_msgs::Marker cube_marker;
     };
