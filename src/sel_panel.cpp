@@ -39,9 +39,7 @@ PLUGINLIB_EXPORT_CLASS(rviz_panel::SelPanel, rviz::Panel)
 
 namespace rviz_panel
 {
-    SelPanel::SelPanel(QWidget * parent)
-    :   rviz::Panel(parent)
-    {
+    SelPanel::SelPanel(QWidget * parent):rviz::Panel(parent) {
         center_sub = n.subscribe("/sel_data/center", 1000, &SelPanel::new_center, this);
 
         // Initialize member variables
@@ -96,12 +94,6 @@ namespace rviz_panel
         connect(frame_slider, SIGNAL(valueChanged(int)), this, SLOT(set_frame(int)));
         connect(radius_slider, SIGNAL(valueChanged(int)), this, SLOT(set_radius(int)));
 
-        // Next we initialize the main RViz classes.
-        //
-        // The VisualizationManager is the container for Display objects,
-        // holds the main Ogre scene, holds the ViewController, etc.  It is
-        // very central and we will probably need one in every usage of
-        // librviz.
         manager = new rviz::VisualizationManager(render_panel);
         manager->initialize();
         manager->startUpdate();
@@ -136,8 +128,7 @@ namespace rviz_panel
 
         rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-        foreach(rosbag::MessageInstance const m, view)
-        {
+        foreach(rosbag::MessageInstance const m, view) {
             sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
             
             frames.push_back(*temp);
@@ -146,17 +137,11 @@ namespace rviz_panel
         bag.close();
 
         frame_pub.publish(frames[frame_idx]);
-
         frame_slider->setMaximum(frames.size() - 1);
-
-        ROS_INFO_STREAM("Finished Reading in Bag");
     }
 
-
+    // set up the constants of the cube
     void SelPanel::setup_cube() {
-        // create a grey box marker
-
-
         cube_marker.ns = "cube";
         cube_marker.id = 0;
 
@@ -168,6 +153,7 @@ namespace rviz_panel
         update_marker();
     }
 
+    // Updates the visuals of the cube marker
     void SelPanel::update_marker() {
         cube_marker.header.frame_id = frame_id; 
         cube_marker.header.stamp = ros::Time::now();
@@ -231,10 +217,10 @@ namespace rviz_panel
         temp.header.frame_id = frame_id;
         temp.header.stamp = ros::Time::now();
 
+        // This is currently very slow because erasing data from vector is VERY slow
         //remove_duplicates();
         
         sel_pub.publish(temp);
-        // TODO: check for duplicates
     }
 
     void SelPanel::remove_duplicates() {
@@ -273,18 +259,38 @@ namespace rviz_panel
         }
     }
 
-
+    // IF SORTED IT'D BE FASTER
     void SelPanel::unselect_region() {
-        return;
-    }
+        double x_diff, y_diff, z_diff;
+        pcl::PointXYZRGB pt;
+        for(uint32_t i = 0; i < current_selection.points.size(); ++i) {
+            pt = current_selection.points[i];
+            x_diff = std::abs(pt.x - cen_x);
+            y_diff = std::abs(pt.y - cen_y);
+            z_diff = std::abs(pt.z - cen_z);
+
+            if(x_diff < radius && y_diff < radius && z_diff < radius) {
+                current_selection.points.erase(current_selection.points.begin() + i);
+                --i;
+            }
+        }
+
+        sensor_msgs::PointCloud2 temp;
+        pcl::toROSMsg(current_selection, temp);
+        temp.header.frame_id = frame_id;
+        temp.header.stamp = ros::Time::now();
+
+        sel_pub.publish(temp);
+    } 
 
     void SelPanel::end_selection() {
         is_selecting = false;
         update_marker();
+
         std_msgs::Bool flag;
         flag.data = is_selecting;
         toggle_pub.publish(flag);
-        //TODO: Save selected region to a file? Make the marker invisible
+
         sel_region->setText("&Start Selection");
         unsel_region->setText("");
         // here should save the current selection into a file and clear out the past selection

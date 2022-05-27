@@ -45,8 +45,8 @@ public:
     void toggle_im(std_msgs::Bool msg) {
         if(msg.data) {
             is_active = true;
-            setup_interactive_marker();
             ROS_INFO_STREAM("Starting Selection");
+            setup_interactive_marker();
         }
         else {
             is_active = false;
@@ -102,7 +102,7 @@ public:
         // 'commit' changes and send to all clients
         server.applyChanges();
         if(is_active) {
-            ros::spin();
+           ros::spin();
         }
     }
 };

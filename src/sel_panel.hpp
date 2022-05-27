@@ -61,17 +61,12 @@ namespace rviz_panel
             virtual void save(rviz::Config config) const;
             virtual void load(const rviz::Config & config);
 
+        private:
             void setup_cube();
             void new_center(const std_msgs::Float32MultiArray new_cen);
             void select();
             void update_marker();
             void remove_duplicates();
-
-        /**
-         *  Next come a couple of public Qt Slots.
-         */
-        public Q_SLOTS:
-
         /**
          *  Here we declare some internal slots.
          */
@@ -120,6 +115,7 @@ namespace rviz_panel
             pcl::PointCloud<pcl::PointXYZRGB> current_selection;
 
             visualization_msgs::Marker cube_marker;
+            
     };
 } // namespace rviz_panel
 
