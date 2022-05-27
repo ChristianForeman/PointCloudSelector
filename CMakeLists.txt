@@ -190,10 +190,8 @@ add_library(sel_panel
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(point_cloud_selector src/interactive_marker.cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(point_cloud_selector ${catkin_LIBRARIES})
 target_link_libraries(sel_panel ${QT_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(moving_marker src/moving_marker.cpp)
@@ -201,13 +199,13 @@ target_link_libraries(moving_marker ${catkin_LIBRARIES})
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS point_cloud_selector
+install(TARGETS sel_panel
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Mark libraries for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
-install(TARGETS point_cloud_selector
+install(TARGETS sel_panel 
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}

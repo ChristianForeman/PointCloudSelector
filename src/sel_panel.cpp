@@ -56,6 +56,7 @@ namespace rviz_panel
         // Construct and lay out labels and slider controls.
         QPushButton* sel_bag = new QPushButton("&Bag Select", this);
         sel_region = new QPushButton("&Start Selection", this);
+        unsel_region = new QPushButton("", this);
         QPushButton* end_selection = new QPushButton("&End Selection", this);
         QLabel* frame_label = new QLabel("Frame");
         frame_slider = new QSlider(Qt::Horizontal);
@@ -65,14 +66,17 @@ namespace rviz_panel
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(100);
+        logging_label = new QLabel("What's up guys!");
         QGridLayout* controls_layout = new QGridLayout();
         controls_layout->addWidget(sel_bag, 0, 0);
         controls_layout->addWidget(sel_region, 0, 1);
-        controls_layout->addWidget(end_selection, 0, 2);
-        controls_layout->addWidget(frame_label, 1, 0);
-        controls_layout->addWidget(frame_slider, 1, 1);
-        controls_layout->addWidget(radius_label, 2, 0);
-        controls_layout->addWidget(radius_slider, 2, 1);
+        controls_layout->addWidget(unsel_region, 1, 0);
+        controls_layout->addWidget(end_selection, 1, 1);
+        controls_layout->addWidget(frame_label, 2, 0);
+        controls_layout->addWidget(frame_slider, 2, 1);
+        controls_layout->addWidget(radius_label, 3, 0);
+        controls_layout->addWidget(radius_slider, 3, 1);
+        controls_layout->addWidget(logging_label, 4, 1);
 
         // Construct and lay out render panel.
         render_panel = new rviz::RenderPanel();
@@ -87,6 +91,7 @@ namespace rviz_panel
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
         connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_region);
+        connect(unsel_region, &QPushButton::clicked, this, &SelPanel::unselect_region);
         connect(end_selection, &QPushButton::clicked, this, &SelPanel::end_selection);
         connect(frame_slider, SIGNAL(valueChanged(int)), this, SLOT(set_frame(int)));
         connect(radius_slider, SIGNAL(valueChanged(int)), this, SLOT(set_radius(int)));
@@ -226,14 +231,35 @@ namespace rviz_panel
         temp.header.frame_id = frame_id;
         temp.header.stamp = ros::Time::now();
 
+        //remove_duplicates();
+        
         sel_pub.publish(temp);
         // TODO: check for duplicates
+    }
+
+    void SelPanel::remove_duplicates() {
+        std::cout << current_selection.points.size() << " Points" << std::endl;
+        pcl::PointXYZRGB pt_i, pt_j;
+        for(uint32_t i = 0; i < current_selection.points.size() - 1; ++i) {
+            pt_i = current_selection.points[i];
+            for(uint32_t j = i + 1; j < current_selection.points.size(); ++j) {
+                pt_j = current_selection.points[j];
+                if(pt_i.x == pt_j.x && pt_i.y == pt_j.y && pt_i.z == pt_j.z) {
+                    // remove the duplicate
+                    current_selection.points.erase(current_selection.points.begin() + j);
+                    --j;
+                    break;
+                }
+            }
+        }
+        std::cout << current_selection.points.size() << " Points" << std::endl;
     }
     
     void SelPanel::select_region() {
         if(is_selecting == false) {
             is_selecting = true;
             sel_region->setText("&Select");
+            unsel_region->setText("&Unselect");
             setup_cube();
             
             // Tell the other node to create the IM
@@ -247,16 +273,28 @@ namespace rviz_panel
         }
     }
 
+
+    void SelPanel::unselect_region() {
+        return;
+    }
+
     void SelPanel::end_selection() {
         is_selecting = false;
         update_marker();
         std_msgs::Bool flag;
         flag.data = is_selecting;
         toggle_pub.publish(flag);
-        current_selection.points.clear();
         //TODO: Save selected region to a file? Make the marker invisible
         sel_region->setText("&Start Selection");
+        unsel_region->setText("");
         // here should save the current selection into a file and clear out the past selection
+
+        // save to currentselection.pcd
+        if(current_selection.points.empty()) {
+            return;
+        }
+        pcl::io::savePCDFile("/home/christianforeman/catkin_ws/src/point_cloud_selector/pcs/current_selection.pcd", current_selection, true);
+        current_selection.points.clear();
     }
 
     void SelPanel::set_frame(int frame_num) {
@@ -269,7 +307,7 @@ namespace rviz_panel
     }
 
     void SelPanel::set_radius(int new_radius) {
-        radius = new_radius/100.0;
+        radius = new_radius / 100.0;
         update_marker();
     }
 } // namespace rviz_panel

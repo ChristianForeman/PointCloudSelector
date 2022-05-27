@@ -10,6 +10,7 @@
 #include <string.h>
 #include <QSlider>
 #include <QPushButton>
+#include <QLabel>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <interactive_markers/interactive_marker_server.h>
@@ -64,6 +65,7 @@ namespace rviz_panel
             void new_center(const std_msgs::Float32MultiArray new_cen);
             void select();
             void update_marker();
+            void remove_duplicates();
 
         /**
          *  Next come a couple of public Qt Slots.
@@ -77,6 +79,7 @@ namespace rviz_panel
 
             void set_bag();
             void select_region();
+            void unselect_region();
             void end_selection(); 
             void set_frame(int frame_num);
             void set_radius(int new_radius);
@@ -107,6 +110,8 @@ namespace rviz_panel
             QSlider* frame_slider;
             QSlider* radius_slider;
             QPushButton* sel_region;
+            QPushButton* unsel_region;
+            QLabel* logging_label;
             bool is_selecting;
 
             std::vector<sensor_msgs::PointCloud2> frames;
