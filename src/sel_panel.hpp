@@ -107,7 +107,6 @@ namespace rviz_panel
             QSlider* radius_slider;
             QPushButton* sel_region;
             QPushButton* unsel_region;
-            QLabel* logging_label;
             bool is_selecting;
 
             std::vector<sensor_msgs::PointCloud2> frames;

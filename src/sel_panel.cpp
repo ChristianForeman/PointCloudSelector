@@ -67,7 +67,7 @@ namespace rviz_panel
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(100);
-        logging_label = new QLabel("What's up guys!");
+        
         QGridLayout* controls_layout = new QGridLayout();
         controls_layout->addWidget(sel_bag, 0, 0);
         controls_layout->addWidget(sel_region, 0, 1);
@@ -77,7 +77,6 @@ namespace rviz_panel
         controls_layout->addWidget(frame_slider, 2, 1);
         controls_layout->addWidget(radius_label, 3, 0);
         controls_layout->addWidget(radius_slider, 3, 1);
-        controls_layout->addWidget(logging_label, 4, 1);
 
         // Construct and lay out render panel.
         render_panel = new rviz::RenderPanel();
