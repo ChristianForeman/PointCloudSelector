@@ -71,7 +71,7 @@ namespace rviz_panel
         QLabel* radius_label = new QLabel("Radius");
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
-        radius_slider->setMaximum(100);
+        radius_slider->setMaximum(0);
 
         QGridLayout* controls_layout = new QGridLayout();
         controls_layout->addWidget(sel_bag, 0, 0);
@@ -91,7 +91,7 @@ namespace rviz_panel
         // Set the top-level layout for this widget.
         setLayout(main_layout);
         frame_slider->setValue(0);
-        radius_slider->setValue(33);
+        radius_slider->setValue(0);
  
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
@@ -269,15 +269,17 @@ namespace rviz_panel
     /**
      * This is the callback to when the user presses the "Select" button. If it is first selection, add in the markers,
      * if it is pressed after the first time, select the region within the cube 
-     * 
      */
     void SelPanel::select_region() {
         if(is_selecting == false) {
             is_selecting = true;
             sel_region->setText("&Select");
             unsel_region->setText("&Unselect");
+            radius_slider->setMinimum(0);
+            radius_slider->setMaximum(100);
             setup_cube();
-            
+            radius_slider->setValue(33);
+
             // Tell the other node to create the IM
             std_msgs::Bool flag;
             flag.data = is_selecting;
@@ -335,7 +337,8 @@ namespace rviz_panel
 
         sel_region->setText("&Start Selection");
         unsel_region->setText("");
-
+        radius_slider->setMinimum(0);
+        radius_slider->setMaximum(0);
         // save to currentselection.pcd, don't care if its empty
         if(current_selection.points.empty()) {
             return;
