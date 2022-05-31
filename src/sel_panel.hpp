@@ -75,8 +75,8 @@ namespace rviz_panel
         private Q_SLOTS:
 
             void set_bag();
-            void select_region();
-            void unselect_region();
+            void select_button();
+            void unselect_button();
             void end_selection(); 
             void set_frame(int frame_num);
             void set_radius(int new_radius);

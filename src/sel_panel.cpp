@@ -95,8 +95,8 @@ namespace rviz_panel
  
         // Make signal/slot connections.
         connect(sel_bag, &QPushButton::clicked, this, &SelPanel::set_bag);
-        connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_region);
-        connect(unsel_region, &QPushButton::clicked, this, &SelPanel::unselect_region);
+        connect(sel_region, &QPushButton::clicked, this, &SelPanel::select_button);
+        connect(unsel_region, &QPushButton::clicked, this, &SelPanel::unselect_button);
         connect(end_selection, &QPushButton::clicked, this, &SelPanel::end_selection);
         connect(frame_slider, SIGNAL(valueChanged(int)), this, SLOT(set_frame(int)));
         connect(radius_slider, SIGNAL(valueChanged(int)), this, SLOT(set_radius(int)));
@@ -270,7 +270,7 @@ namespace rviz_panel
      * This is the callback to when the user presses the "Select" button. If it is first selection, add in the markers,
      * if it is pressed after the first time, select the region within the cube 
      */
-    void SelPanel::select_region() {
+    void SelPanel::select_button() {
         if(is_selecting == false) {
             is_selecting = true;
             sel_region->setText("&Select");
@@ -297,7 +297,7 @@ namespace rviz_panel
      * 
      *  TODO: This is pretty slow because of erasing in a vector, should look into speeding this up (KD trees?)
      */
-    void SelPanel::unselect_region() {
+    void SelPanel::unselect_button() {
         double x_diff, y_diff, z_diff;
         pcl::PointXYZRGB pt;
         for(uint32_t i = 0; i < current_selection.points.size(); ++i) {
