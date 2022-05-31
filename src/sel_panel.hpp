@@ -67,6 +67,7 @@ namespace rviz_panel
             void select();
             void update_marker();
             void remove_duplicates();
+            void publish_selected();
         /**
          *  Here we declare some internal slots.
          */

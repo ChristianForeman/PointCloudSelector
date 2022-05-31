@@ -39,11 +39,14 @@ PLUGINLIB_EXPORT_CLASS(rviz_panel::SelPanel, rviz::Panel)
 
 namespace rviz_panel
 {
+    /**
+     * Constructor of the panel, initializes member variables and creates the UI
+     */
     SelPanel::SelPanel(QWidget * parent):rviz::Panel(parent) {
         center_sub = n.subscribe("/sel_data/center", 1000, &SelPanel::new_center, this);
 
         // Initialize member variables
-        frame_id = "camera_depth_optical_frame";
+        frame_id = "camera_depth_optical_frame";  // TODO: make this an option in the panel
         radius = 0.33;
         frame_idx = 0;
         cen_x = 0;
@@ -81,7 +84,7 @@ namespace rviz_panel
         QVBoxLayout* main_layout = new QVBoxLayout;
         main_layout->addLayout(controls_layout);
 
-        // Set the top-level layout for this MyViz widget.
+        // Set the top-level layout for this widget.
         setLayout(main_layout);
         frame_slider->setValue(0);
         radius_slider->setValue(33);
@@ -114,8 +117,12 @@ namespace rviz_panel
     void SelPanel::load(const rviz::Config & config) {
         rviz::Panel::load(config);
     }
-
+    
+    /**
+     * After pressing "Bag Select", prompt the user with a file system to choose a bag, after that, load the first frame of the bag into rviz 
+     */
     void SelPanel::set_bag() {
+        
         bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home/christianforeman/catkin_ws/src/point_cloud_selector", tr("Bags (*.bag)")).toStdString();
         ROS_INFO_STREAM(bag_filepath);
 
@@ -136,11 +143,14 @@ namespace rviz_panel
         
         bag.close();
 
+        // publish first frame of the bag, set the range of the slider
         frame_pub.publish(frames[frame_idx]);
         frame_slider->setMaximum(frames.size() - 1);
     }
 
-    // set up the constants of the cube
+    /**
+     * Set up the constants of the cube, aka the selection area when the interactive marker is active
+     */
     void SelPanel::setup_cube() {
         cube_marker.ns = "cube";
         cube_marker.id = 0;
@@ -153,8 +163,12 @@ namespace rviz_panel
         update_marker();
     }
 
-    // Updates the visuals of the cube marker
+    /**
+     * Update the visuales of the cube, this happens when the radius or center is changed 
+     * It also occurs when the user begins/ends selection by making the marker transparent or not
+     */
     void SelPanel::update_marker() {
+        // need to setup frame id everytime or rviz complains for some reason
         cube_marker.header.frame_id = frame_id; 
         cube_marker.header.stamp = ros::Time::now();
 
@@ -185,6 +199,9 @@ namespace rviz_panel
         cube_pub.publish(cube_marker);
     }
 
+    /**
+     * Callback to when the interactive marker is moved, it updates the position
+     */
     void SelPanel::new_center(const std_msgs::Float32MultiArray new_cen) {
         // gets message of new center from moving marker
         cen_x = new_cen.data[0];
@@ -193,7 +210,10 @@ namespace rviz_panel
 
         update_marker();
     }
-    
+
+    /**
+     * Adds on the points within the square to the current selection 
+     */
     void SelPanel::select() {
         // get the points that are within the range
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -202,6 +222,7 @@ namespace rviz_panel
 
         double x_diff, y_diff, z_diff;
 
+        // get points within the cube
         foreach(const pcl::PointXYZRGB& pt, cloud->points) {
             x_diff = std::abs(pt.x - cen_x);
             y_diff = std::abs(pt.y - cen_y);
@@ -212,17 +233,17 @@ namespace rviz_panel
             }
         }
 
-        sensor_msgs::PointCloud2 temp;
-        pcl::toROSMsg(current_selection, temp);
-        temp.header.frame_id = frame_id;
-        temp.header.stamp = ros::Time::now();
-
-        // This is currently very slow because erasing data from vector is VERY slow
-        //remove_duplicates();
+        remove_duplicates();
         
-        sel_pub.publish(temp);
+        publish_selected();
     }
 
+    /**
+     * Removes points that appear on top of each other
+     * 
+     * TODO: Make this faster, currently the erasing of the vector takes a really long time
+     * May want to investigate KD-trees more for this
+     */
     void SelPanel::remove_duplicates() {
         std::cout << current_selection.points.size() << " Points" << std::endl;
         pcl::PointXYZRGB pt_i, pt_j;
@@ -241,6 +262,11 @@ namespace rviz_panel
         std::cout << current_selection.points.size() << " Points" << std::endl;
     }
     
+    /**
+     * This is the callback to when the user presses the "Select" button. If it is first selection, add in the markers,
+     * if it is pressed after the first time, select the region within the cube 
+     * 
+     */
     void SelPanel::select_region() {
         if(is_selecting == false) {
             is_selecting = true;
@@ -259,7 +285,12 @@ namespace rviz_panel
         }
     }
 
-    // IF SORTED IT'D BE FASTER
+    /**
+     *  This function is the callback to pressing the "unselect" button. It simply removes the points within the cube that
+     *  are also in the current selection.
+     * 
+     *  TODO: This is pretty slow because of erasing in a vector, should look into speeding this up (KD trees?)
+     */
     void SelPanel::unselect_region() {
         double x_diff, y_diff, z_diff;
         pcl::PointXYZRGB pt;
@@ -275,45 +306,75 @@ namespace rviz_panel
             }
         }
 
-        sensor_msgs::PointCloud2 temp;
-        pcl::toROSMsg(current_selection, temp);
-        temp.header.frame_id = frame_id;
-        temp.header.stamp = ros::Time::now();
-
-        sel_pub.publish(temp);
+        publish_selected();
     } 
 
+    /**
+     * This function is called when the user wants to end their selection and save it to a file 
+     *
+     * TODO: May want to let the user select the save path for the pc 
+     */
     void SelPanel::end_selection() {
+        // if user pressed when selection is not active, do nothing
+        if(is_selecting = false) {
+            return;
+        }
         is_selecting = false;
+
+        // make the cube transparent
         update_marker();
 
+        // notify the interactive marker that selection is over
         std_msgs::Bool flag;
         flag.data = is_selecting;
         toggle_pub.publish(flag);
 
         sel_region->setText("&Start Selection");
         unsel_region->setText("");
-        // here should save the current selection into a file and clear out the past selection
 
-        // save to currentselection.pcd
+        // save to currentselection.pcd, don't care if its empty
         if(current_selection.points.empty()) {
             return;
         }
         pcl::io::savePCDFile("/home/christianforeman/catkin_ws/src/point_cloud_selector/pcs/current_selection.pcd", current_selection, true);
         current_selection.points.clear();
+        publish_selected(); 
     }
 
+    /**
+     * This function is called when the frame of the bag is changed on the slider, needs to wipe out any previous selections 
+     */
     void SelPanel::set_frame(int frame_num) {
-        // reset collision statistics
-        end_selection(); // may want to add a default arg to end selection which signifies saving or not
+        // reset the selection
+        current_selection.points.clear();
+        publish_selected();
+
+        if(is_selecting) {
+            end_selection();
+        }
 
         frame_idx = frame_num;
 
         frame_pub.publish(frames[frame_idx]);
     }
 
+    /**
+     * Callback to radius slider, simply changes the size of the cube 
+     */
     void SelPanel::set_radius(int new_radius) {
         radius = new_radius / 100.0;
         update_marker();
+    }
+
+    /**
+     * Helper to publish the selected region to rviz 
+     */
+    void SelPanel::publish_selected() {
+        sensor_msgs::PointCloud2 temp;
+        pcl::toROSMsg(current_selection, temp);
+        temp.header.frame_id = frame_id;
+        temp.header.stamp = ros::Time::now();
+
+        sel_pub.publish(temp);
     }
 } // namespace rviz_panel
