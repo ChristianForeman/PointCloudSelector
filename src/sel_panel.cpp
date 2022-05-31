@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QFileDialog>
 #include <QPushButton>
+#include <QWheelEvent>
 
 #include "rviz/visualization_manager.h"
 #include "rviz/render_panel.h"
@@ -43,6 +44,10 @@ namespace rviz_panel
      * Constructor of the panel, initializes member variables and creates the UI
      */
     SelPanel::SelPanel(QWidget * parent):rviz::Panel(parent) {
+        cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_sphere", 1);
+        frame_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/cur_frame", 1);
+        sel_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/selected_pc", 1);
+        toggle_pub = n.advertise<std_msgs::Bool>("/sel_data/toggle", 1);
         center_sub = n.subscribe("/sel_data/center", 1000, &SelPanel::new_center, this);
 
         // Initialize member variables
@@ -67,7 +72,7 @@ namespace rviz_panel
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(100);
-        
+
         QGridLayout* controls_layout = new QGridLayout();
         controls_layout->addWidget(sel_bag, 0, 0);
         controls_layout->addWidget(sel_region, 0, 1);
@@ -363,6 +368,33 @@ namespace rviz_panel
     void SelPanel::set_radius(int new_radius) {
         radius = new_radius / 100.0;
         update_marker();
+    }
+
+    /**
+     * This is the callback for scrolling the mouse within the panel. 
+     * It increases/decreases the size of the cube to make adjusting easier
+     * 
+     */
+    void SelPanel::wheelEvent(QWheelEvent * event) {
+        if(is_selecting == false) {
+            return;
+        }
+        QPoint delta = event->angleDelta();
+        if(delta.y() > 0) {
+            int new_radius = (int) (radius * 100) + 5;
+            if(new_radius <= 100) {
+                // setValue triggers the callback
+                radius_slider->setValue(new_radius);
+            }
+        }
+        else {
+            int new_radius = (int) (radius * 100) - 5;
+            if(new_radius >= 0) {
+                // setValue triggers the callback
+                radius_slider->setValue(new_radius);
+            }
+        }
+        event->accept();
     }
 
     /**

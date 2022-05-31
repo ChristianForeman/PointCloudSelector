@@ -11,6 +11,7 @@
 #include <QSlider>
 #include <QPushButton>
 #include <QLabel>
+#include <QWheelEvent>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <interactive_markers/interactive_marker_server.h>
@@ -79,6 +80,7 @@ namespace rviz_panel
             void end_selection(); 
             void set_frame(int frame_num);
             void set_radius(int new_radius);
+            void wheelEvent(QWheelEvent * event);
 
         /**
          *  Finally, we close up with protected member variables
@@ -86,11 +88,10 @@ namespace rviz_panel
         protected:
             // ROS declaration
             ros::NodeHandle n;
-            ros::Publisher cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_sphere", 1);
-            ros::Publisher frame_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/cur_frame", 1);
-            ros::Publisher sel_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/selected_pc", 1);
-            ros::Publisher toggle_pub = n.advertise<std_msgs::Bool>("/sel_data/toggle", 1);
-
+            ros::Publisher cube_pub;
+            ros::Publisher frame_pub;
+            ros::Publisher sel_pub;
+            ros::Publisher toggle_pub;
             ros::Subscriber center_sub;
 
             rviz::VisualizationManager* manager;
