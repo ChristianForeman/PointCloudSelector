@@ -1,3 +1,6 @@
 .vscode/
 include/
 *.bag
+*.xyz
+*.ply
+*.obj
