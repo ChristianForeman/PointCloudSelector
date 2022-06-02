@@ -197,6 +197,12 @@ target_link_libraries(sel_panel ${QT_LIBRARIES} ${catkin_LIBRARIES})
 add_executable(moving_marker src/moving_marker.cpp)
 target_link_libraries(moving_marker ${catkin_LIBRARIES})
 
+add_executable(send_pcd_msg src/send_pcd_msg.cpp)
+target_link_libraries(send_pcd_msg ${catkin_LIBRARIES})
+
+add_executable(cylinder_sac src/cylinder_sac.cpp)
+target_link_libraries(cylinder_sac ${catkin_LIBRARIES})
+
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 install(TARGETS sel_panel
