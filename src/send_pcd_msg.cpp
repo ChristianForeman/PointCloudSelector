@@ -4,6 +4,8 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 
+
+// run with: rosrun point_cloud_selector send_pcd_msg topic_name pcd_file_path
 int main(int argc, char** argv) {
     ros::init(argc, argv, "pcd_msgs");
     ros::NodeHandle n;

@@ -127,7 +127,7 @@ namespace rviz_panel
      */
     void SelPanel::set_bag() {
         
-        bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home/christianforeman/catkin_ws/src/point_cloud_selector", tr("Bags (*.bag)")).toStdString();
+        bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home/miguel/catkin_ws/src/point_cloud_selector", tr("Bags (*.bag)")).toStdString();
         ROS_INFO_STREAM(bag_filepath);
 
         // read in the rosbag
@@ -343,7 +343,7 @@ namespace rviz_panel
         if(current_selection.points.empty()) {
             return;
         }
-        pcl::io::savePCDFile("/home/christianforeman/catkin_ws/src/point_cloud_selector/pcs/current_selection.pcd", current_selection, true);
+        pcl::io::savePCDFile("/home/miguel/catkin_ws/src/point_cloud_selector/pcs/current_selection.pcd", current_selection, true);
         current_selection.points.clear();
         publish_selected(); 
     }
