@@ -105,6 +105,7 @@ namespace rviz_panel
             double cen_y;
             double cen_z;
             QSlider* frame_slider;
+            QLabel* frame_number;
             QSlider* radius_slider;
             QPushButton* sel_region;
             QPushButton* unsel_region;

@@ -68,6 +68,7 @@ namespace rviz_panel
         frame_slider = new QSlider(Qt::Horizontal);
         frame_slider->setMinimum(0);
         frame_slider->setMaximum(0);
+        frame_number = new QLabel("");
         QLabel* radius_label = new QLabel("Radius");
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
@@ -80,6 +81,7 @@ namespace rviz_panel
         controls_layout->addWidget(end_selection, 1, 1);
         controls_layout->addWidget(frame_label, 2, 0);
         controls_layout->addWidget(frame_slider, 2, 1);
+        controls_layout->addWidget(frame_number, 2, 2);
         controls_layout->addWidget(radius_label, 3, 0);
         controls_layout->addWidget(radius_slider, 3, 1);
 
@@ -150,6 +152,7 @@ namespace rviz_panel
         // publish first frame of the bag, set the range of the slider
         frame_pub.publish(frames[frame_idx]);
         frame_slider->setMaximum(frames.size() - 1);
+        frame_number->setText("0");
     }
 
     /**
@@ -363,7 +366,7 @@ namespace rviz_panel
         }
 
         frame_idx = frame_num;
-
+        frame_number->setText(QString::number(frame_num));
         frame_pub.publish(frames[frame_idx]);
     }
 

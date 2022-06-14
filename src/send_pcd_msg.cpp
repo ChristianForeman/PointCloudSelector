@@ -13,6 +13,8 @@ int main(int argc, char** argv) {
     
     ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>(topic_name, 1);
 
+    ros::Rate loop_rate(30);
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
     pcl::io::loadPCDFile(pcd_file, *cloud);
@@ -27,11 +29,17 @@ int main(int argc, char** argv) {
     while(pub.getNumSubscribers() < 1) {
         if (!ros::ok())
         {
+            ROS_INFO_STREAM("not ok");
             return -1;
         }
         ROS_WARN_ONCE("Please create a subscriber to the marker");
         sleep(1);
     }
     
-    pub.publish(temp);
+    // this is done to ensure the message is published, otherwise I get weird problems
+    int i = 0;
+    while(i < 10) {
+        pub.publish(temp);
+        ++i;
+    }
 }
