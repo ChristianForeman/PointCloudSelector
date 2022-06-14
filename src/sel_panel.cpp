@@ -126,13 +126,8 @@ namespace rviz_panel
      * After pressing "Bag Select", prompt the user with a file system to choose a bag, after that, load the first frame of the bag into rviz 
      */
     void SelPanel::set_bag() {
-<<<<<<< HEAD
-        
-        bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home/miguel/catkin_ws/src/point_cloud_selector", tr("Bags (*.bag)")).toStdString();
-=======
         // change the default filepath below, example: home/christianforeman/catkin_ws/src/point_cloud_selector" 
         bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home", tr("Bags (*.bag)")).toStdString();
->>>>>>> 48d04f322ee350b0eff2449acb5b3fdc76349060
         ROS_INFO_STREAM(bag_filepath);
 
         // read in the rosbag
@@ -346,15 +341,11 @@ namespace rviz_panel
         if(current_selection.points.empty()) {
             return;
         }
-<<<<<<< HEAD
-        pcl::io::savePCDFile("/home/miguel/catkin_ws/src/point_cloud_selector/pcs/current_selection.pcd", current_selection, true);
-=======
 
         QString filename = QFileDialog::getSaveFileName(this, tr("Save Selection"), "/home", tr("PCDs (*.pcd);;All Files (*)"));
         if(!filename.isEmpty()) {
             pcl::io::savePCDFile(filename.toStdString(), current_selection, true);
         }
->>>>>>> 48d04f322ee350b0eff2449acb5b3fdc76349060
         current_selection.points.clear();
         publish_selected(); 
     }
