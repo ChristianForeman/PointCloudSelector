@@ -4,8 +4,12 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 
+<<<<<<< HEAD
 
 // run with: rosrun point_cloud_selector send_pcd_msg topic_name pcd_file_path
+=======
+// run with rosrun point_cloud_selector send_pcd_msg <topic> <filepath_of_pcd>
+>>>>>>> 48d04f322ee350b0eff2449acb5b3fdc76349060
 int main(int argc, char** argv) {
     ros::init(argc, argv, "pcd_msgs");
     ros::NodeHandle n;
@@ -17,6 +21,8 @@ int main(int argc, char** argv) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
     pcl::io::loadPCDFile(pcd_file, *cloud);
+
+    ROS_INFO_STREAM(cloud->points.size());
     
     sensor_msgs::PointCloud2 temp;
     pcl::toROSMsg(*cloud, temp);
