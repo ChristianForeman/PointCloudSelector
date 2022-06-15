@@ -69,7 +69,7 @@ namespace rviz_panel
         frame_slider->setMinimum(0);
         frame_slider->setMaximum(0);
         frame_number = new QLabel("");
-        QLabel* radius_label = new QLabel("Radius");
+        QLabel* radius_label = new QLabel("Size"); //size aka radius, idk the correct term
         radius_slider = new QSlider(Qt::Horizontal);
         radius_slider->setMinimum(0);
         radius_slider->setMaximum(0);
@@ -132,6 +132,11 @@ namespace rviz_panel
         bag_filepath = QFileDialog::getOpenFileName(this, tr("Open Bag"), "/home", tr("Bags (*.bag)")).toStdString();
         ROS_INFO_STREAM(bag_filepath);
 
+        // if its empty, return
+        if(bag_filepath.empty()) {
+            return;
+        }
+
         // read in the rosbag
         rosbag::Bag bag;
         bag.open(bag_filepath);
@@ -140,6 +145,9 @@ namespace rviz_panel
         topics.push_back(std::string("/camera/depth/color/points"));
 
         rosbag::View view(bag, rosbag::TopicQuery(topics));
+
+        // clear out any previous frames 
+        frames.clear();
 
         foreach(rosbag::MessageInstance const m, view) {
             sensor_msgs::PointCloud2::ConstPtr temp = m.instantiate<sensor_msgs::PointCloud2>();
@@ -239,6 +247,11 @@ namespace rviz_panel
             }
         }
 
+        // if nothing is in the selection, no need to publish anything
+        if(current_selection.points.empty()) {
+            return;
+        }
+
         remove_duplicates();
         
         publish_selected();
@@ -258,7 +271,7 @@ namespace rviz_panel
                 pt_j = current_selection.points[j];
                 if(pt_i.x == pt_j.x && pt_i.y == pt_j.y && pt_i.z == pt_j.z) {
                     // remove the duplicate
-                    // current_selection.points.erase(current_selection.points.begin() + j);
+                    current_selection.points.erase(current_selection.points.begin() + j);
                     --j;
                     break;
                 }
@@ -345,10 +358,14 @@ namespace rviz_panel
             return;
         }
 
-        QString filename = QFileDialog::getSaveFileName(this, tr("Save Selection"), "/home", tr("PCDs (*.pcd);;All Files (*)"));
-        if(!filename.isEmpty()) {
-            pcl::io::savePCDFile(filename.toStdString(), current_selection, true);
+        QString filename = QFileDialog::getSaveFileName(this, tr("Save Selection"), "/home", tr("PCD Files (*.pcd)"));
+        std::string filename_str = filename.toStdString();
+
+        if(!(filename_str.find(".pcd") != std::string::npos)) {
+            filename_str += ".pcd";
         }
+
+        pcl::io::savePCDFile(filename_str, current_selection, true);
         current_selection.points.clear();
         publish_selected(); 
     }
