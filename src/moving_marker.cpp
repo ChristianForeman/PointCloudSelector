@@ -56,7 +56,6 @@ public:
         else {
             server.clear();
             server.applyChanges();
-            ROS_INFO_STREAM("Ending Selection and Saving to pcs/current_selection.pcd");
         }
     }
 
