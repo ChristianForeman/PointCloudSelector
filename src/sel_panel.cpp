@@ -44,7 +44,7 @@ namespace rviz_panel
      * Constructor of the panel, initializes member variables and creates the UI
      */
     SelPanel::SelPanel(QWidget * parent):rviz::Panel(parent) {
-        cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_sphere", 1);
+        cube_pub = n.advertise<visualization_msgs::Marker>("/sel_data/sel_cube", 1);
         frame_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/cur_frame", 1);
         sel_pub = n.advertise<sensor_msgs::PointCloud2>("/sel_data/selected_pc", 1);
         toggle_pub = n.advertise<std_msgs::Bool>("/sel_data/toggle", 1);
