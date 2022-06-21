@@ -53,7 +53,7 @@ def plot_pointcloud_rviz(pub: rospy.Publisher, xs, ys, zs):
     pub.publish(msg)
 
 
-def rviz_arrow(pub, start, direction, name, thickness=0.01, length_scale=0.2, color='r'):
+def rviz_arrow(pub, start, direction, name, thickness=0.004, length_scale=0.2, color='r'):
     """
     This function displays an arrow in Rviz.
     :param pub: ROS Publisher
@@ -143,7 +143,6 @@ def main():
         - define the orientation of the gripper
             - project the camera-to-plant vector into the plane
     """
-
     # Initialize ros node
     rospy.init_node("branch_cutting_demo")
     # Initialize publishers for arrow, and PCs
@@ -155,7 +154,8 @@ def main():
     plane_pub = rospy.Publisher("plane", PointCloud2, queue_size=10)
 
     # Load PC that was previously selected by the interactive marker in Rviz
-    pcd = o3d.io.read_point_cloud("../pcs/current_selection.pcd")
+    pcd = o3d.io.read_point_cloud("../pcs/branch-cutting/seg-01.pcd")
+
     # Transform open3d PC to numpy array
     points = np.asarray(pcd.points)
     # Apply plane segmentation function from open3d and get the best inliers
@@ -209,16 +209,16 @@ def main():
         # Rviz commands
         tfw.send_transform_matrix(camera2ee, parent=camera_frame, child='end_effector_left')
         # Call rviz_arrow function to first component, cut direction and second component
-        rviz_arrow(arrow_pub, inliers_centroid, normal, name='first component', length_scale=0.2, color='r')
-        rviz_arrow(arrow_pub, inliers_centroid, cut_y, name='cut y', length_scale=0.2, color='g')
-        rviz_arrow(arrow_pub, inliers_centroid, cut_direction, name='cut direction', length_scale=0.2, color='b')
+        rviz_arrow(arrow_pub, inliers_centroid, normal, name='first component', length_scale=0.04, color='r')
+        rviz_arrow(arrow_pub, inliers_centroid, cut_y, name='cut y', length_scale=0.05, color='g')
+        rviz_arrow(arrow_pub, inliers_centroid, cut_direction, name='cut direction', length_scale=0.05, color='b')
 
         # Call plot_plane function to visualize plane in Rviz
-        plot_plane(plane_pub, inliers_centroid, normal, size=0.1, res=0.001)
+        plot_plane(plane_pub, inliers_centroid, normal, size=0.05, res=0.001)
         # Call plot_pointcloud_rviz function to visualize PCs in Rviz
         plot_pointcloud_rviz(src_pub, points[:, 0], points[:, 1], points[:, 2])
         plot_pointcloud_rviz(inliers_pub, inlier_points[:, 0], inlier_points[:, 1], inlier_points[:, 2])
-        rospy.sleep(0.1)
+        rospy.sleep(1)
 
 
 if __name__ == '__main__':
