@@ -125,7 +125,7 @@ def main():
     plane_pub = rospy.Publisher("dirt_plane", PointCloud2, queue_size=10)
 
     # Load point cloud and visualize it
-    pcd = o3d.io.read_point_cloud("../pcs/weed-extraction/weed-00.pcd")
+    pcd = o3d.io.read_point_cloud("../pcs/weed-extraction/weed-09.pcd")
     # o3d.visualization.draw_geometries([pcd])
 
     # Get numpy array of xyz and rgb values of the point cloud
@@ -134,11 +134,20 @@ def main():
 
     # Filter the point cloud so that only the green points stay
     # Get the indices of the points with g parameter greater than x
-    r_low, g_low, b_low = 0, 0.5, 0
+    r_low, g_low, b_low = 0, 0.6, 0
     r_high, g_high, b_high = 1, 1, 1
     green_points_indices = np.where((pcd_colors[:, 0] > r_low) & (pcd_colors[:, 0] < r_high) &
                                     (pcd_colors[:, 1] > g_low) & (pcd_colors[:, 1] < g_high) &
                                     (pcd_colors[:, 2] > b_low) & (pcd_colors[:, 2] < b_high))
+
+    h = len(green_points_indices[0])
+    if len(green_points_indices[0]) == 1:
+        r_low, g_low, b_low = 0, 0.3, 0
+        r_high, g_high, b_high = 1, 1, 1
+        green_points_indices = np.where((pcd_colors[:, 0] > r_low) & (pcd_colors[:, 0] < r_high) &
+                                        (pcd_colors[:, 1] > g_low) & (pcd_colors[:, 1] < g_high) &
+                                        (pcd_colors[:, 2] > b_low) & (pcd_colors[:, 2] < b_high))
+
     # Save xyzrgb info in green_points (type: numpy array)
     green_points_xyz = pcd_points[green_points_indices]
     green_points_rgb = pcd_colors[green_points_indices]
@@ -155,7 +164,7 @@ def main():
     green_pcd_points = np.asarray(green_pcd.points)
 
     # Apply DBSCAN to green points
-    labels = np.array(green_pcd.cluster_dbscan(eps=0.015, min_points=10))
+    labels = np.array(green_pcd.cluster_dbscan(eps=0.02, min_points=10))
 
     """
     # Color clusters and visualize them
